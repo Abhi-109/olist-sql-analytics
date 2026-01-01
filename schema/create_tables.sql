@@ -60,3 +60,16 @@ CREATE TABLE order_items (
     FOREIGN KEY (product_id) REFERENCES products(product_id),
     FOREIGN KEY (seller_id) REFERENCES sellers(seller_id)
 );
+
+CREATE TABLE payments (
+    order_id VARCHAR(50) NOT NULL,
+    payment_sequential INT NOT NULL,
+    payment_type VARCHAR(50) NOT NULL,
+    payment_installments INT,
+    payment_value DECIMAL(10, 2) NOT NULL,
+    PRIMARY KEY (order_id, payment_sequential),
+    INDEX idx_payments_order_id (order_id),
+    INDEX idx_payments_payment_type (payment_type),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+);
+
