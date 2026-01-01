@@ -28,9 +28,9 @@ LEFT JOIN orders o ON p.order_id = o.order_id
 WHERE o.order_id IS NULL;
 
 -- Null sanity
-SELECT
-  SUM(order_purchase_timestamp IS NULL) AS null_purchase_ts
-FROM orders;
+SELECT COUNT(*) AS null_purchase_ts
+FROM orders
+WHERE order_purchase_timestamp IS NULL;
 
 -- Temporal sanity
 
@@ -54,13 +54,11 @@ WHERE order_delivered_customer_date IS NOT NULL
   AND order_delivered_carrier_date IS NOT NULL
   AND order_delivered_customer_date < order_delivered_carrier_date;
 
-
--- order_estimated_delivery_date should not be before order_purchase_timestamp
+-- order_delivered_customer_date should not be before order_purchase_timestamp
 SELECT COUNT(*) AS delivered_before_purchase
 FROM orders
 WHERE order_delivered_customer_date IS NOT NULL
   AND order_delivered_customer_date < order_purchase_timestamp;
-
 
 -- order_estimated_delivery_date should not be before order_purchase_timestamp
 SELECT COUNT(*) AS estimate_before_purchase
@@ -72,4 +70,3 @@ SELECT COUNT(*) AS delivered_without_timestamp
 FROM orders
 WHERE order_status = 'delivered'
   AND order_delivered_customer_date IS NULL;
-
