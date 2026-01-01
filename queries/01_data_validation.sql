@@ -31,3 +31,45 @@ WHERE o.order_id IS NULL;
 SELECT
   SUM(order_purchase_timestamp IS NULL) AS null_purchase_ts
 FROM orders;
+
+-- Temporal sanity
+
+-- order_approved_at should not be before order_purchase_timestamp
+SELECT COUNT(*) AS approval_before_purchase
+FROM orders
+WHERE order_approved_at IS NOT NULL
+  AND order_approved_at < order_purchase_timestamp;
+
+-- order_delivered_carrier_date should not be before order_approved_at
+SELECT COUNT(*) AS carrier_before_approval
+FROM orders
+WHERE order_delivered_carrier_date IS NOT NULL
+  AND order_approved_at IS NOT NULL
+  AND order_delivered_carrier_date < order_approved_at;
+
+-- order_delivered_customer_date should not be before order_delivered_carrier_date
+SELECT COUNT(*) AS customer_before_carrier
+FROM orders
+WHERE order_delivered_customer_date IS NOT NULL
+  AND order_delivered_carrier_date IS NOT NULL
+  AND order_delivered_customer_date < order_delivered_carrier_date;
+
+
+-- order_estimated_delivery_date should not be before order_purchase_timestamp
+SELECT COUNT(*) AS delivered_before_purchase
+FROM orders
+WHERE order_delivered_customer_date IS NOT NULL
+  AND order_delivered_customer_date < order_purchase_timestamp;
+
+
+-- order_estimated_delivery_date should not be before order_purchase_timestamp
+SELECT COUNT(*) AS estimate_before_purchase
+FROM orders
+WHERE order_estimated_delivery_date < order_purchase_timestamp;
+
+-- Delivered orders should have a non-null order_delivered_customer_date
+SELECT COUNT(*) AS delivered_without_timestamp
+FROM orders
+WHERE order_status = 'delivered'
+  AND order_delivered_customer_date IS NULL;
+
