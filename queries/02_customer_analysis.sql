@@ -157,3 +157,64 @@ FROM ranked_products
 WHERE product_rank <= 5
 ORDER BY year, month, product_rank;
 
+
+
+-- Top 10 sellers by delivered revenue and their contribution to total marketplace revenue
+WITH seller_revenue AS (
+    SELECT
+        oi.seller_id,
+        SUM(oi.price + oi.freight_value) AS seller_revenue
+    FROM order_items oi
+    JOIN orders o
+        ON oi.order_id = o.order_id
+    WHERE o.order_status = 'delivered'
+    GROUP BY oi.seller_id
+),
+ranked_sellers AS (
+    SELECT
+        seller_id,
+        seller_revenue,
+        RANK() OVER (ORDER BY seller_revenue DESC) AS revenue_rank
+    FROM seller_revenue
+),
+total_marketplace_revenue AS (
+    SELECT
+        SUM(seller_revenue) AS total_revenue
+    FROM seller_revenue
+)
+SELECT
+    rs.seller_id,
+    rs.seller_revenue,
+    rs.revenue_rank,
+    (rs.seller_revenue / tmr.total_revenue) * 100 AS revenue_contribution_percent
+FROM ranked_sellers rs
+CROSS JOIN total_marketplace_revenue tmr
+WHERE rs.revenue_rank <= 10
+ORDER BY rs.revenue_rank;
+
+-- How does revenue vary by payment type, and how significant are installment-based payments in total revenue?
+
+WITH payment_revenue AS (
+    SELECT
+        CASE
+            WHEN payment_installments > 1 THEN 'installment'
+            WHEN payment_installments = 1 OR payment_installments IS NULL THEN 'non_installment'
+        END AS payment_category,
+        SUM(payment_value) AS total_revenue
+    FROM payments p
+    JOIN orders o ON p.order_id = o.order_id
+    WHERE o.order_status = 'delivered'
+    GROUP BY
+        CASE
+            WHEN payment_installments > 1 THEN 'installment'
+            WHEN payment_installments = 1 OR payment_installments IS NULL THEN 'non_installment'
+        END
+),
+total_revenue AS (
+    SELECT SUM(total_revenue) AS grand_total FROM payment_revenue
+)
+SELECT
+    pr.payment_category,
+    pr.total_revenue,
+    (pr.total_revenue / tr.grand_total) * 100 AS revenue_contribution_percent
+FROM payment_revenue pr, total_revenue tr;
