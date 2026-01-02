@@ -48,3 +48,27 @@ WHERE last_purchase_date <
           FROM orders
           WHERE order_status = 'delivered'
       ) - INTERVAL 6 MONTH;
+
+
+-- Customer inactivity distribution based on 6-month rule
+SELECT
+    customer_status,
+    COUNT(*) AS customer_count
+FROM (
+    SELECT
+        o.customer_id,
+        CASE
+            WHEN MAX(o.order_purchase_timestamp) <
+                 (
+                     SELECT MAX(order_purchase_timestamp)
+                     FROM orders
+                     WHERE order_status = 'delivered'
+                 ) - INTERVAL 6 MONTH
+            THEN 'inactive'
+            ELSE 'active'
+        END AS customer_status
+    FROM orders o
+    WHERE o.order_status = 'delivered'
+    GROUP BY o.customer_id
+) t
+GROUP BY customer_status;
