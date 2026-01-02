@@ -72,3 +72,23 @@ FROM (
     GROUP BY o.customer_id
 ) t
 GROUP BY customer_status;
+
+-- Monthly revenue trend for delivered orders
+WITH revenue_base AS (
+    SELECT
+        YEAR(o.order_purchase_timestamp) AS year,
+        MONTH(o.order_purchase_timestamp) AS month,
+        (oi.price + oi.freight_value) AS revenue
+    FROM orders o
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+    WHERE o.order_status = 'delivered'
+)
+SELECT
+    year,
+    month,
+    SUM(revenue) AS monthly_revenue
+FROM revenue_base
+GROUP BY year, month
+ORDER BY year, month;
+
