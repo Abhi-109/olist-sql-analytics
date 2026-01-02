@@ -27,3 +27,24 @@ JOIN orders o
     ON c.customer_id = o.customer_id
 WHERE o.order_status = 'delivered'
 GROUP BY c.customer_id;
+
+
+-- Which customers have not made a delivered purchase in the last 6 months of the dataset?
+-- Customers inactive for more than 6 months based on last delivered purchase
+SELECT
+    customer_id,
+    last_purchase_date
+FROM (
+    SELECT
+        o.customer_id,
+        MAX(o.order_purchase_timestamp) AS last_purchase_date
+    FROM orders o
+    WHERE o.order_status = 'delivered'
+    GROUP BY o.customer_id
+) t
+WHERE last_purchase_date <
+      (
+          SELECT MAX(order_purchase_timestamp)
+          FROM orders
+          WHERE order_status = 'delivered'
+      ) - INTERVAL 6 MONTH;
