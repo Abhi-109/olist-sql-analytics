@@ -92,3 +92,68 @@ FROM revenue_base
 GROUP BY year, month
 ORDER BY year, month;
 
+-- Month-over-month revenue growth for delivered orders
+WITH monthly_revenue AS (
+    SELECT
+        YEAR(o.order_purchase_timestamp) AS year,
+        MONTH(o.order_purchase_timestamp) AS month,
+        SUM(oi.price + oi.freight_value) AS monthly_revenue
+    FROM orders o
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+    WHERE o.order_status = 'delivered'
+    GROUP BY
+        YEAR(o.order_purchase_timestamp),
+        MONTH(o.order_purchase_timestamp)
+)
+SELECT
+    year,
+    month,
+    monthly_revenue,
+    LAG(monthly_revenue) OVER (ORDER BY year, month) AS previous_month_revenue,
+    (
+        (monthly_revenue - LAG(monthly_revenue) OVER (ORDER BY year, month))
+        / LAG(monthly_revenue) OVER (ORDER BY year, month)
+    ) * 100 AS mom_growth_percent
+FROM monthly_revenue
+ORDER BY year, month;
+
+
+-- For each month, find the top 5 products by total revenue
+WITH monthly_product_revenue AS (
+    SELECT
+        YEAR(o.order_purchase_timestamp) AS year,
+        MONTH(o.order_purchase_timestamp) AS month,
+        oi.product_id,
+        SUM(oi.price + oi.freight_value) AS monthly_product_revenue
+    FROM orders o
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+    WHERE o.order_status = 'delivered'
+    GROUP BY
+        YEAR(o.order_purchase_timestamp),
+        MONTH(o.order_purchase_timestamp),
+        oi.product_id
+),
+ranked_products AS (
+    SELECT
+        year,
+        month,
+        product_id,
+        monthly_product_revenue,
+        RANK() OVER (
+            PARTITION BY year, month
+            ORDER BY monthly_product_revenue DESC
+        ) AS product_rank
+    FROM monthly_product_revenue
+)
+SELECT
+    year,
+    month,
+    product_id,
+    monthly_product_revenue,
+    product_rank
+FROM ranked_products
+WHERE product_rank <= 5
+ORDER BY year, month, product_rank;
+
